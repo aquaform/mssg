@@ -12,9 +12,40 @@ var gulp           = require('gulp'),
 		autoprefixer   = require('gulp-autoprefixer'),
 		ftp            = require('vinyl-ftp'),
 		notify         = require("gulp-notify"),
-		rsync          = require('gulp-rsync');
+		rsync          = require('gulp-rsync'),
+	  smartgrid      = require('smart-grid'),
+		gcmq           = require('gulp-group-css-media-queries');
 
 // Пользовательские скрипты проекта
+var smartgridSettings = {
+    outputStyle: 'scss', /* less || scss || sass || styl */
+    columns: 12, /* number of grid columns */
+    offset: '30px', /* gutter width px || % */
+    mobileFirst: true, /* mobileFirst ? 'min-width' : 'max-width' */
+    container: {
+        minWidth: '1200px', /* max-width оn very large screen */
+        fields: '30px' /* side fields */
+    },
+    breakPoints: {
+        lg: {
+            width: '1100px', /* -> @media (max-width: 1100px) */
+        },
+        md: {
+            width: '960px'
+        },
+        sm: {
+            width: '780px',
+            fields: '15px' /* set fields only if you want to change container.fields */
+        },
+        xs: {
+            width: '560px'
+        }
+    }
+};
+
+gulp.task('smartgrid', function() {
+	smartgrid('./app/sass/_mixins', smartgridSettings);
+});
 
 gulp.task('common-js', function() {
 	return gulp.src([
@@ -48,17 +79,18 @@ gulp.task('browser-sync', function() {
 });
 
 gulp.task('sass', function() {
-	return gulp.src('app/sass/**/*.sass')
+	return gulp.src('app/sass/**/*.scss')
 	.pipe(sass({outputStyle: 'expand'}).on("error", notify.onError()))
 	.pipe(rename({suffix: '.min', prefix : ''}))
 	.pipe(autoprefixer(['last 15 versions']))
-	.pipe(cleanCSS()) // Опционально, закомментировать при отладке
+	//.pipe(cleanCSS()) // Опционально, закомментировать при отладке
+	.pipe(gcmq())
 	.pipe(gulp.dest('app/css'))
 	.pipe(browserSync.reload({stream: true}));
 });
 
 gulp.task('watch', ['sass', 'js', 'browser-sync'], function() {
-	gulp.watch('app/sass/**/*.sass', ['sass']);
+	gulp.watch('app/sass/**/*.scss', ['sass']);
 	gulp.watch(['libs/**/*.js', 'app/js/common.js'], ['js']);
 	gulp.watch('app/*.html', browserSync.reload);
 });
@@ -67,7 +99,7 @@ gulp.task('imagemin', function() {
 	return gulp.src('app/img/**/*')
 	// .pipe(cache(imagemin())) // Cache Images
 	.pipe(imagemin())
-	.pipe(gulp.dest('dist/img')); 
+	.pipe(gulp.dest('dist/img'));
 });
 
 gulp.task('build', ['removedist', 'imagemin', 'sass', 'js'], function() {
